@@ -26,7 +26,7 @@ st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 st.write('<style>div.block-container{padding-top:1px;}</style>', unsafe_allow_html=True)
 
 ######################### importation/nettoyage data
-data = pd.read_csv('/Users/enzoberreur/Documents/STMamet_Dashboard/src/visualizations/data.csv')
+data = pd.read_csv('data.csv')
 
 numeric_columns = ['CA VENTE', 'CA ACHAT', 'MARGE']
 data[numeric_columns] = data[numeric_columns].replace(',', '.', regex=True)

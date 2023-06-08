@@ -26,7 +26,7 @@ st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 st.write('<style>div.block-container{padding-top:1px;}</style>', unsafe_allow_html=True)
 
 ######################### importation/nettoyage data
-data = pd.read_csv('data.csv')
+data = pd.read_csv('/Users/enzoberreur/Documents/STMamet_Dashboard/src/visualizations/data.csv')
 
 numeric_columns = ['CA VENTE', 'CA ACHAT', 'MARGE']
 data[numeric_columns] = data[numeric_columns].replace(',', '.', regex=True)
@@ -48,15 +48,30 @@ month_mapping = {
     12: 'Décembre'
 }
 selected_month = st.sidebar.selectbox('Mois', ['ALL'] + list(month_mapping.values()))
-selected_canal = st.sidebar.selectbox('Organisation Commerciale', ['ALL'] + list(data['CANAL'].dropna().unique()))
+selected_year = st.sidebar.selectbox('Année', ['ALL'] + list(data['ANNEE'].dropna().unique().astype(str)))
+selected_product = st.sidebar.multiselect('Produit', ['ALL'] + list(data['DESIGNATION'].dropna().unique()), default='ALL')
+selected_canal = st.sidebar.multiselect('Organisation Commerciale', ['ALL'] + list(data['CANAL'].dropna().unique()), default='ALL')
+
 if selected_month == 'ALL':
     filtered_data = data.copy()
 else:
     selected_month_key = list(month_mapping.keys())[list(month_mapping.values()).index(selected_month)]
     filtered_data = data[data['MOIS'] == selected_month_key]
 
-if selected_canal != 'ALL':
-    filtered_data = filtered_data[filtered_data['CANAL'] == selected_canal]
+if 'ALL' not in selected_canal:
+    filtered_data = filtered_data[filtered_data['CANAL'].isin(selected_canal)]
+
+selected_central = st.sidebar.multiselect('Central', options=list(filtered_data['CENTRAL'].dropna().unique()))
+if selected_central:
+    filtered_data = filtered_data[filtered_data['CENTRAL'].isin(selected_central)]
+
+if selected_year != 'ALL':
+    filtered_data = filtered_data[filtered_data['ANNEE'] == int(selected_year)]
+
+if 'ALL' not in selected_product:
+    filtered_data = filtered_data[filtered_data['DESIGNATION'].isin(selected_product)]
+
+######################### Titre
 
 ######################### Titre interactif
 selected_month_text = f"du mois de {selected_month}" if selected_month != 'ALL' else "de l'année 2023"
@@ -87,7 +102,7 @@ else:
 col1, col2, col3 = st.columns(3)
 with col1:
     st.markdown("<h2 style='font-size: 20px;'>Chiffre d'affaires</h2>", unsafe_allow_html=True)
-    st.markdown(f'<h1 style="font-size: 40px; color: #575fcf;">{sales_by_month_formatted} €</h1>', unsafe_allow_html=True)
+    st.markdown(f'<h1 style="font-size: 40px; color: #BF9D7A;">{sales_by_month_formatted} €</h1>', unsafe_allow_html=True)
     if variation > 0:
         st.markdown(f'<h2 style="font-size: 16px; color: #55efc4;">↑ +{variation:.0f}% <span style="color: #ffffff; font-weight: 100; font-size: 12px;">par rapport au mois précédent</span></h2>', unsafe_allow_html=True)
     elif variation < 0:
@@ -110,7 +125,7 @@ else:
 
 with col2:
     st.markdown('<h2 style="font-size: 20px; ">Prix de revient</h2>', unsafe_allow_html=True)
-    st.markdown(f'<h1 style="font-size: 40px; color: #575fcf;">{sales_by_month_achat_formatted} €</h1>', unsafe_allow_html=True)
+    st.markdown(f'<h1 style="font-size: 40px; color: #D4DCA9;">{sales_by_month_achat_formatted} €</h1>', unsafe_allow_html=True)
     if variation_achat > 0:
         st.markdown(f'<h2 style="font-size: 16px; color: #55efc4;">↑ +{variation_achat:.0f}% <span style="color: #ffffff; font-weight: 100; font-size: 12px;">par rapport au mois précédent</span></h2>', unsafe_allow_html=True)
     elif variation_achat < 0:
@@ -131,7 +146,7 @@ else:
     variation_marge = 0
 with col3:
     st.markdown('<h2 style="font-size: 20px;">Marge Brute</h2>', unsafe_allow_html=True)
-    st.markdown(f'<h1 style="font-size: 40px; color: #3c40c6;">{sales_by_month_marge_formatted} €</h1>', unsafe_allow_html=True)
+    st.markdown(f'<h1 style="font-size: 40px; color: #EBF2EA;">{sales_by_month_marge_formatted} €</h1>', unsafe_allow_html=True)
     if variation_marge > 0:
         st.markdown(f'<h2 style="font-size: 16px; color: #55efc4;">↑ +{variation_marge:.0f}% <span style="color: #ffffff; font-weight: 100; font-size: 12px;"> par rapport au mois précédent</span></h2>', unsafe_allow_html=True)
     elif variation_marge < 0:
@@ -139,10 +154,7 @@ with col3:
     else:
         st.markdown('<h2 style="font-size: 14px;"></h2>', unsafe_allow_html=True)
 
-
-
 add_vertical_space(1)
-
 
 #########################  Onglet avec graphique
 @contextmanager
@@ -151,10 +163,11 @@ def chart_container(
         "Classement des organisations commerciales par chiffre d'affaires",
         "Classement des produits par chiffre d'affaires",
         "Répartition du chiffre d'affaires par organisation commerciale",
-        "Évolution du chiffre d'affaires mensuel et prévisions futures"
+        "Évolution du chiffre d'affaires mensuel et prévisions futures",
+        "Diagramme de dispersion avec une ligne de régression pour le chiffre d'affaires et la marge"
     ),
 ) -> Generator:
-    tab_1, tab_2, tab_3,tab_4 = st.tabs(tabs)
+    tab_1, tab_2, tab_3,tab_4,tab_5 = st.tabs(tabs)
 
 ######################### Chart 1 ( qu'on retrouve dans la fonction tout en bas)
     with tab_1:
@@ -215,7 +228,27 @@ def chart_container(
             st.plotly_chart(fig)
         generate_ca_vente_by_month(filtered_data)
             
+    with tab_5:  # Changez le numéro de l'onglet en fonction de votre code
+        def generate_scatterplot(data):
+            # Conversion des colonnes en numérique
+            data['CA VENTE'] = pd.to_numeric(data['CA VENTE'], errors='coerce')
+            data['MARGE'] = pd.to_numeric(data['MARGE'], errors='coerce')
 
+            # Création du diagramme de dispersion
+            fig = px.scatter(data, x='CA VENTE', y='MARGE', trendline="ols", hover_data=['DESIGNATION','NUM COMMANDE'])
+
+            # Mise à jour du layout
+            fig.update_layout(
+                title='Relation entre le chiffre d\'affaires et la marge',
+                xaxis_title='Chiffre d\'affaires',
+                yaxis_title='Marge',
+                height=350,
+                margin=dict(l=20, r=20, t=20, b=20)
+            )
+
+            st.plotly_chart(fig)
+        generate_scatterplot(filtered_data)
+        
 ######################### Chart 1
 def graph():
     with chart_container():
@@ -234,5 +267,4 @@ def graph():
             )
             st.altair_chart(chart, use_container_width=True)
         generate_top5_chart(filtered_data)
-
 graph()
